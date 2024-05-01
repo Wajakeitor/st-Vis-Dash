@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-df1 = pd.read_csv("datos/animes.csv")
+df1 = pd.read_csv("animes.csv")
 # df2 = pd.read_csv(profiles)
 # df3 = pd.read_csv(reviews)
 
