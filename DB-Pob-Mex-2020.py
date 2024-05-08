@@ -10,9 +10,7 @@ mx_regions_geo = requests.get(repo_url).json()
 st.title("Población de México en el 2020")
 columnas = st.columns((2,4.5,2), gap='medium')
 
-df = pd.read_csv("datos/Estados-2020.csv")
-
-
+df = pd.read_csv("Estados-2020.csv")
 
 with columnas[0]:
     st.markdown("### Relaciones proporcionales")
