@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 import matplotlib.animation as animation
+import numpy as np
 
 # Configurar el ancho de la página
 st.set_page_config(layout="wide")
@@ -10,7 +11,7 @@ st.set_page_config(layout="wide")
 df = pd.read_csv("Data/Empleos.csv")
 df = df[["Age", "Sex", "Occupation", "Industry Group", "Year", "Workforce", "Worked Hours Week", "Monthly Wage"]]
 
-df["Años agrupados"] = pd.cut(df['Age'], bins=range(15, 106, 5), right=False)
+df["Años agrupados"] = pd.cut(df['Age'], bins=range(15, 106, 5), right=False).apply(lambda x: x.left)
 
 st.title("Población laboralmente activa en México")
 
@@ -68,23 +69,40 @@ with columns[1]:
     fig, ax = plt.subplots()
     ax.set_xlim((df0["Year"].min(), df0["Year"].max()))
     ax.set_ylim((df0["Chamba Semanal"].min(), df0["Chamba Semanal"].max()))
-    line, = ax.plot([], [], lw=2)
+    lines = [ax.plot([], [])[0] for _ in range(17)]
+    texts = [ax.text(1,1,f"{i*5 + 15}") for i in range(17)]
+
+    x_data = [0 for _ in range(17)]
+    y_data = [0 for _ in range(17)]
+    x_1 = [0 for _ in range(17)]
+    y_1 = [0 for _ in range(17)]
+
+    for i in range(17):
+            x_data[i] = df0[df0["Años agrupados"] == 5*i + 15]["Year"]
+            y_data[i] = df0[df0["Años agrupados"] == 5*i + 15]["Chamba Semanal"]
+            x_1[i] = np.linspace(x_data[i].min(), x_data[i].max(), 6*(x_data[i].max()-x_data[i].min()))
+            y_1[i] = np.interp(x_1[i], x_data[i].values, y_data[i].values)
+    
+    # Añadir etiquetas de colores para cada grupo de edad
 
     # Inicializar la línea
     def init():
-        line.set_data([], [])
-        return (line,)
+        for text in texts:
+            text.set_position((0, 0))
+
+        for line in lines:
+            line.set_data([], [])
+        return lines + texts
 
     # Función de actualización para la animación
     def update(frame):
-        df1 = df0[df0["Year"] <= frame]
-        x_data = df1["Year"].values
-        y_data = df1["Chamba Semanal"].values
-        line.set_data(x_data, y_data)
-        return (line,)
+        for i, line in enumerate(lines):
+            line.set_data(x_1[i][:frame], y_1[i][:frame])
+            texts[i].set_position((x_1[i][frame-1], y_1[i][frame-1]))
+        return lines + texts
 
     # Crear la animación
-    ani = animation.FuncAnimation(fig, update, frames=range(df0["Year"].min(), df0["Year"].max()+1), init_func=init, blit=True, interval=200, repeat=True)
+    ani = animation.FuncAnimation(fig, update, frames=len(x_1[0]), init_func=init, blit=True, interval=1000/60, repeat=True)
 
     # Guardar la animación como un archivo GIF
     ani.save("animation.gif", writer='pillow')
