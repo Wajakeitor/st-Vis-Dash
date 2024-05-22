@@ -2,7 +2,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 import matplotlib.animation as animation
+import plotly.express as px
 import numpy as np
+import plotly.graph_objects as gp
+
 
 # Configurar el ancho de la página
 st.set_page_config(layout="wide")
@@ -52,7 +55,7 @@ with columns[0]:
     # Añadir etiquetas y título
     ax.set_xlabel('Sexo')
     ax.set_ylabel('Salario')
-    st.markdown(f"##### Salario promedio mensual de \n ##### {opcionplt}")
+    st.markdown(f"##### Salario promedio mensual de {opcionplt.lower()}")
 
     # Mostrar el gráfico
     st.pyplot(fig)
@@ -63,7 +66,7 @@ with columns[0]:
 with columns[1]:
     st.markdown("### Horas de trabajo semanales")
 
-    df0 = df.groupby(["Year", "Años agrupados"], observed=False).agg({"Worked Hours Week": 'mean'}).reset_index().rename(columns={"Worked Hours Week": "Chamba Semanal"})
+    df0 = df[df["Occupation"] == opcionplt].groupby(["Year", "Años agrupados"], observed=False).agg({"Worked Hours Week": 'mean'}).reset_index().rename(columns={"Worked Hours Week": "Chamba Semanal"})
 
     # Crear la figura y los ejes
     fig, ax = plt.subplots()
@@ -112,6 +115,65 @@ with columns[1]:
 
 st.columns(1)
 
-df
+#####dd
+columns = st.columns((2,3))
+df_filt = df[df["Occupation"] == opcionplt]
+
+with columns[0]:
+    st.markdown("### Piramide")
+    def retornarRangoEdad(x):
+        edades = [[i,i+4] for i in range(0,95,4)]
+        for el in edades:
+            if el[0] <= x <= el[1]:
+                return str(el)
+    df_filt["RangosEdad"] = df_filt["Age"].apply(retornarRangoEdad)
+    ppir = df_filt[["RangosEdad","Workforce","Sex"]].groupby(by=["Sex","RangosEdad"]).count().reset_index()
+    df_hom = df_filt[df_filt["Sex"] == "Hombre"]
+    df_muj = df_filt[df_filt["Sex"] == "Mujer"]
+    df_hom_G = df_hom[["RangosEdad","Workforce"]].groupby(by="RangosEdad").sum().reset_index()
+    df_muj_G = df_muj[["RangosEdad","Workforce"]].groupby(by="RangosEdad").sum().reset_index()
+    df_muj_G["Workforce"] = df_muj_G["Workforce"] * -1
+    RangEdad = df_hom_G["RangosEdad"]
+    x_M = df_hom_G["Workforce"]
+    x_F = df_muj_G["Workforce"]
+
+    fig_go = gp.Figure()
+  
+    # Adding Male data to the fig_goure
+    fig_go.add_trace(gp.Bar(y= RangEdad, x = x_M, 
+                        name = 'Hombres',
+                        width=0.5, 
+                        orientation = 'h',
+                        marker=dict(
+        color='blue' 
+    )))
+    
+    # Adding Female data to the fig_goure
+    fig_go.add_trace(gp.Bar(y = RangEdad, x = x_F,
+                        name = 'Mujeres',
+                        width=0.5,
+                        orientation = 'h',marker=dict(
+        color='pink'  
+    )))
+    
+    # Updating the layout for our graph
+    fig_go.update_layout(title = f'Piramide de fuerza laboral de {opcionplt.lower()}',
+                    title_font_size = 22, barmode = 'relative',
+                    bargap = 0.0, bargroupgap = 0,
+                    )
+    
+    st.plotly_chart(fig_go)
+with columns[1]:
+    st.markdown(f"### Cambio en el tiempo del salario mensual de {opcionplt.lower()}")
+    df_mean = df_filt[["Monthly Wage","Year"]].groupby(by="Year").mean().sort_values(by="Year").reset_index()
+    # Crear el gráfico de líneas animado
+    fig = px.scatter(df_mean, x="Year", y="Monthly Wage",animation_frame="Year",range_x=[df_mean["Year"].min(), df_mean["Year"].max()],
+                range_y=[df_mean["Monthly Wage"].min(), df_mean["Monthly Wage"].max()])
+
+    # Mostrar el gráfico en Streamlit
+    st.plotly_chart(fig)
+
+st.columns(1)
+
 
 st.markdown("###### Datos recopilados de: https://www.economia.gob.mx/datamexico/es/vizbuilder?booleans=64&cube=inegi_enoe&drilldowns%5B0%5D=Age+Group.Age&drilldowns%5B1%5D=Sex&drilldowns%5B2%5D=Occupation+Actual+Job.Occupation.Occupation&drilldowns%5B3%5D=Industry+Actual+Job.Industry.Industry+Group&drilldowns%5B4%5D=Date.Year&locale=es&measures%5B0%5D=Workforce&measures%5B1%5D=Worked+Hours+Week&measures%5B2%5D=Monthly+Wage")
